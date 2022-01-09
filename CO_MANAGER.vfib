@@ -1,0 +1,50 @@
+{
+  "name": "CO MANAGER",
+  "type": "virtual_device",
+  "properties": {
+    "deviceIcon": 1002,
+    "categories": "[\"other\"]",
+    "currentIcon": "1002",
+    "log": "",
+    "logTemp": "",
+    "mainLoop": "local device                 = fibaro:getSelfId();\nlocal dataRoomTemp           = {};\nlocal dataRoomTempSensor     = {};\nlocal dataRoomThermostatTemp = {};\nlocal dataRoomThermostat     = {};\nlocal roomsToHeat            = {};\n\nfibaro:debug('Heating loop started...');\n\nfor i = 1,1000 do\n  local devType = fibaro:getType(i)\n  --fibaro:debug(devType)\n\n  local roomId = 0;\n\n  if devType == \"com.fibaro.thermostatDanfoss\" then\n    roomId                         = fibaro:getRoomID(i);\n    roomSet                        = fibaro:getValue(i, \"value\");\n  \tdataRoomThermostat[roomId]     = i;\n  \tdataRoomThermostatTemp[roomId] = roomSet;\n    fibaro: debug('Thermostat in ' .. roomId .. ' named ' .. fibaro:getName(i) .. ' set up to: ' .. roomSet);\n  end\n  \n  if devType == \"virtual_device\" then\n  \tif fibaro:getName(i) == \"VThermostat\" then\n      roomId                         = fibaro:getRoomID(i);\n      roomSet                        = fibaro:getValue(i, \"ui.Temperature.value\");\n      dataRoomThermostat[roomId]     = i;    \n      dataRoomThermostatTemp[roomId] = roomSet;\n      fibaro:debug('Virtual thermostat in ' .. roomId .. ' named ' .. fibaro:getName(i) .. ' set up to: ' .. roomSet);\n    end\n  end\n  \n  if devType == \"com.fibaro.temperatureSensor\" then\n  \tif string.find(fibaro:getName(i), '2', 1, true) == nil then\n      roomId                     = fibaro:getRoomID(i);\n      roomTemp                   = fibaro:getValue(i, \"value\");\n      dataRoomTempSensor[roomId] = i;\n      dataRoomTemp[roomId]       = roomTemp;\n      fibaro:debug('Temperature ' .. fibaro:getName(i) .. ' in room ID ' .. roomId .. ' - ' .. roomTemp);\n    end\n  end\nend\n\nlocal hist = 0; -- no histeresis by default\nlocal co_status = tonumber(fibaro:getGlobalValue('CO_STATUS'));\n\nif co_status == 1 then\n  hist = tonumber(fibaro:getGlobalValue('CO_SET_HIST'));\n  fibaro:debug('Hysteresis: ' .. hist);\nend\n\nlocal roomRequiredTemp = 18; -- being set just in case of..,\nlocal roomCurrentTemp  = 18; -- being set just in case of..,\nlocal co_seton         = 0;  \nlocal roomName;\n\nfor k, v in pairs(dataRoomThermostatTemp) do \n  \troomRequiredTemp = v + hist;\n  \troomCurrentTemp  = tonumber(dataRoomTemp[k]);  \n    co_status        = tonumber(fibaro:getGlobalValue('CO_STATUS'));\n    roomName         = fibaro:getRoomName(k);\n  \tfibaro:debug('Room ' .. roomName .. ' Required(' .. dataRoomThermostat[k] .. ') ' .. roomRequiredTemp .. ' Current(' .. dataRoomTempSensor[k] .. ') ' .. roomCurrentTemp .. ' CO Status ' .. co_status);\n\n  \tif roomCurrentTemp < roomRequiredTemp and co_status == 1 then\n    \tco_seton = 1;\n    \ttable.insert(roomsToHeat, roomName);\n    \tfibaro:debug('Still On');\n   \telseif roomCurrentTemp < roomRequiredTemp and co_status == 0 then\n    \tco_seton = 1;\n    \ttable.insert(roomsToHeat, roomName);\n    \tfibaro:debug('Turn On');    \n    end\nend\n\nif tonumber(fibaro:getGlobalValue('SUMMER')) == 1 then\n    fibaro:debug('Summer time!');\n    co_seton = 0;\nend\n\nif co_seton == 1 then\n\tfibaro:debug('Should be set On');\n\tfibaro:setGlobal('CO_STATUS', 1);\nelseif co_seton == 0 then\n\tfibaro:debug('Turn Off');\n\tfibaro:setGlobal('CO_STATUS', 0);\nend\n\nco_status = tonumber(fibaro:getGlobalValue('CO_STATUS'));\nfibaro:debug('New CO status ' .. co_status);\n\nif co_status == 1 then\n\tfibaro:call(device, \"setProperty\", \"ui.LabelStatus.value\", \"On\");\n\tfibaro:call(device, \"setProperty\", \"ui.LabelRoomsToHeat.value\", table.concat(roomsToHeat, \", \"));\nelseif co_status == 0 then\n\tfibaro:call(device, \"setProperty\", \"ui.LabelStatus.value\", \"Off\");\nend  \n",
+    "ui.LabelRoomsToHeat.value": "Upper bathroom",
+    "ui.LabelStatus.value": "Off",
+    "visible": "true",
+    "rows": [
+      {
+        "type": "label",
+        "elements": [
+          {
+            "id": 1,
+            "lua": false,
+            "waitForResponse": false,
+            "caption": "Status",
+            "name": "LabelStatus",
+            "favourite": false,
+            "main": true
+          }
+        ]
+      },
+      {
+        "type": "label",
+        "elements": [
+          {
+            "id": 2,
+            "lua": false,
+            "waitForResponse": false,
+            "caption": "Rooms to heat",
+            "name": "LabelRoomsToHeat",
+            "favourite": false,
+            "main": false
+          }
+        ]
+      }
+    ]
+  },
+  "actions": {
+    "pressButton": 1,
+    "setSlider": 2,
+    "setProperty": 2
+  }
+}
