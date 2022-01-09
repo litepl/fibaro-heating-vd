@@ -1,11 +1,9 @@
-local device = fibaro:getSelfId();
-
-local dataRoomTemp = {};
-local dataRoomTempSensor = {};
+local device                 = fibaro:getSelfId();
+local dataRoomTemp           = {};
+local dataRoomTempSensor     = {};
 local dataRoomThermostatTemp = {};
-local dataRoomThermostat = {};
-
-local roomsToHeat = {};
+local dataRoomThermostat     = {};
+local roomsToHeat            = {};
 
 fibaro:debug('Heating loop started...');
 
@@ -16,35 +14,35 @@ for i = 1,1000 do
   local roomId = 0;
 
   if devType == "com.fibaro.thermostatDanfoss" then
-  	roomId = fibaro:getRoomID(i);
-    roomSet = fibaro:getValue(i, "value");
-    dataRoomThermostat[roomId] = i;    
-    dataRoomThermostatTemp[roomId] = roomSet;
-    fibaro:debug('Termostat w ' .. roomId .. ' nazwa ' .. fibaro:getName(i) .. ' ustawiony na: ' .. roomSet);
+    roomId                         = fibaro:getRoomID(i);
+    roomSet                        = fibaro:getValue(i, "value");
+  	dataRoomThermostat[roomId]     = i;
+  	dataRoomThermostatTemp[roomId] = roomSet;
+    fibaro: debug('Thermostat in ' .. roomId .. ' named ' .. fibaro:getName(i) .. ' set up to: ' .. roomSet);
   end
   
   if devType == "virtual_device" then
   	if fibaro:getName(i) == "VThermostat" then
-    	roomId = fibaro:getRoomID(i);
-        roomSet = fibaro:getValue(i, "ui.Temperature.value");
-		dataRoomThermostat[roomId] = i;    
-    	dataRoomThermostatTemp[roomId] = roomSet;
-    	fibaro:debug('Wirtualny termostat w ' .. roomId .. ' nazwa ' .. fibaro:getName(i) .. ' ustawiony na: ' .. roomSet);
+      roomId                         = fibaro:getRoomID(i);
+      roomSet                        = fibaro:getValue(i, "ui.Temperature.value");
+      dataRoomThermostat[roomId]     = i;    
+      dataRoomThermostatTemp[roomId] = roomSet;
+      fibaro:debug('Virtual thermostat in ' .. roomId .. ' named ' .. fibaro:getName(i) .. ' set up to: ' .. roomSet);
     end
   end
   
   if devType == "com.fibaro.temperatureSensor" then
   	if string.find(fibaro:getName(i), '2', 1, true) == nil then
-    	roomId = fibaro:getRoomID(i);
-        roomTemp = fibaro:getValue(i, "value");
-		dataRoomTempSensor[roomId] = i;
-    	dataRoomTemp[roomId] = roomTemp;
-      	fibaro:debug('Temperatura ' .. fibaro:getName(i) .. ' w pokoju ID ' .. roomId .. ' - ' .. roomTemp);
+      roomId                     = fibaro:getRoomID(i);
+      roomTemp                   = fibaro:getValue(i, "value");
+      dataRoomTempSensor[roomId] = i;
+      dataRoomTemp[roomId]       = roomTemp;
+      fibaro:debug('Temperature ' .. fibaro:getName(i) .. ' in room ID ' .. roomId .. ' - ' .. roomTemp);
     end
   end
 end
 
-local hist = 0;
+local hist = 0; -- no histeresis by default
 local co_status = tonumber(fibaro:getGlobalValue('CO_STATUS'));
 
 if co_status == 1 then
@@ -52,20 +50,16 @@ if co_status == 1 then
   fibaro:debug('Hysteresis: ' .. hist);
 end
 
-
-local roomRequiredTemp = 18;
-local roomCurrentTemp = 18;
-
-local co_seton = 0;
-
+local roomRequiredTemp = 18; -- being set just in case of..,
+local roomCurrentTemp  = 18; -- being set just in case of..,
+local co_seton         = 0;  
 local roomName;
 
 for k, v in pairs(dataRoomThermostatTemp) do 
   	roomRequiredTemp = v + hist;
-  	roomCurrentTemp = tonumber(dataRoomTemp[k]);  
-    co_status = tonumber(fibaro:getGlobalValue('CO_STATUS'));
-	roomName = fibaro:getRoomName(k);
-  	
+  	roomCurrentTemp  = tonumber(dataRoomTemp[k]);  
+    co_status        = tonumber(fibaro:getGlobalValue('CO_STATUS'));
+    roomName         = fibaro:getRoomName(k);
   	fibaro:debug('Room ' .. roomName .. ' Required(' .. dataRoomThermostat[k] .. ') ' .. roomRequiredTemp .. ' Current(' .. dataRoomTempSensor[k] .. ') ' .. roomCurrentTemp .. ' CO Status ' .. co_status);
 
   	if roomCurrentTemp < roomRequiredTemp and co_status == 1 then
@@ -93,7 +87,6 @@ elseif co_seton == 0 then
 end
 
 co_status = tonumber(fibaro:getGlobalValue('CO_STATUS'));
-
 fibaro:debug('New CO status ' .. co_status);
 
 if co_status == 1 then
