@@ -94,4 +94,5 @@ if co_status == 1 then
 	fibaro:call(device, "setProperty", "ui.LabelRoomsToHeat.value", table.concat(roomsToHeat, ", "));
 elseif co_status == 0 then
 	fibaro:call(device, "setProperty", "ui.LabelStatus.value", "Off");
+        fibaro:call(device, "setProperty", "ui.LabelRoomsToHeat.value", "NONE");
 end  
